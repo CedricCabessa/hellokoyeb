@@ -16,9 +16,9 @@ async def hello():
 
 @router.get("/cats")
 async def cats(uow: Uow) -> list[Cat]:
-    return service.get_cats(uow)
+    return await service.get_cats(uow)
 
 
 @router.post("/cats")
 async def add_cat(uow: Uow, cat: Cat) -> Cat:
-    return service.add_cat(uow, cat)
+    return await service.add_cat(uow, cat)

@@ -1,26 +1,28 @@
 from typing import Self
-from sqlalchemy.orm import Session, sessionmaker, Session
-from sqlmodel import SQLModel, create_engine
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlmodel import SQLModel
 
 from hello.cat_repository import CatRepository
 
-session = sessionmaker()
+session = async_sessionmaker()
 
 
-def create_db_and_tables(sqla_url: str):
-    engine = create_engine(sqla_url)
+async def create_db_and_tables(sqla_url: str):
+    engine = create_async_engine(sqla_url)
 
-    SQLModel.metadata.create_all(engine)
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+
     session.configure(bind=engine)
 
 
 class UnitOfWork:
     cat_repository: CatRepository
 
-    def __enter__(self) -> Self:
+    async def __aenter__(self) -> Self:
         return self
 
-    def __exit__(self, exn_type, *args, **kwargs):
+    async def __aexit__(self, exn_type, *args, **kwargs):
         pass
 
 
@@ -30,17 +32,17 @@ def create_unit_of_work() -> UnitOfWork:
 
 
 class SqlAlchemyUnitOfWork(UnitOfWork):
-    def __init__(self, session_factory: sessionmaker[Session]):
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession]):
         self.session_factory = session_factory
 
-    def __enter__(self) -> Self:
+    async def __aenter__(self) -> Self:
         self.session = self.session_factory()
         self.cat_repository = CatRepository(self.session)
         return self
 
-    def __exit__(self, exn_type, *args, **kwargs):
+    async def __aexit__(self, exn_type, *args, **kwargs):
         if exn_type is None:
-            self.session.commit()
+            await self.session.commit()
         else:
-            self.session.rollback()
-        self.session.close()
+            await self.session.rollback()
+        await self.session.close()
