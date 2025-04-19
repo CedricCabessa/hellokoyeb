@@ -7,12 +7,8 @@ from hello.cat_repository import CatRepository
 session = sessionmaker()
 
 
-def create_db_and_tables():
-    sqlite_file_name = "database.db"
-    sqlite_url = f"sqlite:///{sqlite_file_name}"
-
-    connect_args = {"check_same_thread": False}
-    engine = create_engine(sqlite_url, connect_args=connect_args)
+def create_db_and_tables(sqla_url: str):
+    engine = create_engine(sqla_url)
 
     SQLModel.metadata.create_all(engine)
     session.configure(bind=engine)
